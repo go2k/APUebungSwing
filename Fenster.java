@@ -18,6 +18,10 @@ public class Fenster extends JFrame {
     private JMenu jMenuDatei;
     private JMenuItem jmiNeu, jmiSpeichern, jmiBeenden;
 
+    private JTable jTable;
+    private MeinTableModel meinTableModel;
+    private JScrollPane jScrollPane;
+
     public Fenster() throws HeadlessException {
         super("Einkaufsliste");
         this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -79,6 +83,11 @@ public class Fenster extends JFrame {
         jpNorth.add(new JLabel("Anzahl"));
         jpNorth.add(jtxtAnzahl);
         jpNorth.add(jbtnEintragen);
+
+        meinTableModel = new MeinTableModel();
+        jTable = new JTable(meinTableModel);
+        jScrollPane = new JScrollPane(jTable);
+        this.add(jScrollPane, BorderLayout.CENTER);
 
         jpSouth = new JPanel();
         jpSouth.setLayout(new FlowLayout(FlowLayout.RIGHT));
