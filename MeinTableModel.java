@@ -2,7 +2,12 @@ package Einkaufliste;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class MeinTableModel extends AbstractTableModel {
@@ -12,9 +17,6 @@ public class MeinTableModel extends AbstractTableModel {
 
     public MeinTableModel() {
         gegenstands = new ArrayList<>();
-        gegenstands.add(new Gegenstand("Apfel", 0.45, 2));
-        gegenstands.add(new Gegenstand("Birne", 0.55, 5));
-        gegenstands.add(new Gegenstand("Bananen", 0.56, 7));
     }
 
     @Override
@@ -49,4 +51,59 @@ public class MeinTableModel extends AbstractTableModel {
         return columns[column];
     }
 
+    public void hinzufuegen(Gegenstand gegenstand) {
+
+        Iterator<Gegenstand> iterator = gegenstands.iterator();
+
+        while (iterator.hasNext()) {
+            Gegenstand next = iterator.next();
+            if (next.getBezeichnung().equals(gegenstand.getBezeichnung())) {
+                next.setAnzahl(next.getAnzahl() + gegenstand.getAnzahl());
+                this.fireTableDataChanged();
+                return;
+            }
+        }
+        this.gegenstands.add(gegenstand);
+        this.fireTableDataChanged();
+    }
+
+    public void speichern(File file) throws IOException {
+
+        BufferedWriter bw = null;
+        bw = new BufferedWriter(new FileWriter(file));
+
+        for (Gegenstand gegenstand : gegenstands) {
+            bw.write(gegenstand.getBezeichnung() + "," + gegenstand.getAnzahl() + "," + gegenstand.getEinzelpreis() + "," + gegenstand.getAnzahl() * gegenstand.getEinzelpreis());
+            bw.newLine();
+        }
+        if (bw != null) {
+            bw.close();
+        }
+    }
+
+    public double getGesamtpreis() {
+
+        double gesamtpreis = 0.0;
+        for (Gegenstand gegenstand : gegenstands) {
+            gesamtpreis += gegenstand.getAnzahl() * gegenstand.getEinzelpreis();
+        }
+        return gesamtpreis;
+    }
+
+    public void loescheEintrag(String bezeichnung) {
+
+        Iterator<Gegenstand> iterator = gegenstands.iterator();
+
+        while (iterator.hasNext()) {
+
+            Gegenstand gegenstand = iterator.next();
+            if (gegenstand.getBezeichnung().equals(bezeichnung)) {
+                iterator.remove();
+                fireTableDataChanged();
+                return;
+            }
+        }
+    }
 }
+
+

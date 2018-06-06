@@ -18,7 +18,7 @@ public class DAO {
         this.preparedStatement = connection.prepareStatement("Select bezeichnung, preis from gegenstand where bezeichnung like ? order by bezeichnung");
     }
 
-    private void close() throws SQLException {
+    public void close() throws SQLException {
 
         if (connection != null) {
             connection.close();
@@ -40,4 +40,5 @@ public class DAO {
     public List<Gegenstand> getGegenstande() {
         return gegenstande;
     }
+
 }

@@ -1,36 +1,47 @@
 package Einkaufliste;
 
+import javafx.beans.value.WritableStringValue;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
+import java.io.IOException;
+import java.sql.SQLException;
 
 public class Fenster extends JFrame {
 
     private JPanel jpNorth, jpSouth;
-    private JComboBox<String> jComboBox;
+    private JComboBox<Gegenstand> jComboBox;
     private JTextField jtxtAnzahl;
     private JButton jbtnEintragen;
+    private JButton jbtnLoeschen;
     private JLabel jlblGesmatpreis;
     private JMenuBar jMenuBar;
     private JMenu jMenuDatei;
     private JMenuItem jmiNeu, jmiSpeichern, jmiBeenden;
 
+    private JFileChooser jFileChooser;
+
     private JTable jTable;
     private MeinTableModel meinTableModel;
     private JScrollPane jScrollPane;
 
-    public Fenster() throws HeadlessException {
+    private DAO dao;
+
+    public Fenster() throws HeadlessException, SQLException {
         super("Einkaufsliste");
         this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
-        this.setSize(400, 400);
+        this.dao = new DAO();
         initMenu();
         initComponents();
         initEvents();
 
         // muss am ende stehen:
+        this.setSize(600, 400);
         this.setVisible(true);
     }
 
@@ -49,6 +60,97 @@ public class Fenster extends JFrame {
                 beenden();
             }
         });
+
+        jbtnEintragen.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                eintragen();
+            }
+        });
+
+        jbtnLoeschen.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                loeschen();
+            }
+        });
+
+        jmiNeu.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                neu();
+            }
+        });
+
+        jmiSpeichern.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                speichern();
+            }
+        });
+    }
+
+    private void loeschen() {
+        int selectedRow = jTable.getSelectedRow();
+        if (selectedRow >= 0) {
+            String bezeichnung = (String) meinTableModel.getValueAt(selectedRow, 1);
+            meinTableModel.loescheEintrag(bezeichnung);
+            anzeigeAktualisieren();
+        }
+    }
+
+    private void speichern() {
+
+        int result = jFileChooser.showSaveDialog(this);
+        if (result == JFileChooser.CANCEL_OPTION) {
+            return;
+        }
+        File file = jFileChooser.getSelectedFile();
+        try {
+            meinTableModel.speichern(file);
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, "Datei konnte nicht gespeichert werden", "Fehler", JOptionPane.WARNING_MESSAGE);
+        }
+        JOptionPane.showMessageDialog(this, "Datei gespeichert ", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+        this.setTitle("Einkaufsliste: " + file.getName());
+    }
+
+    private void anzeigeAktualisieren() {
+        jlblGesmatpreis.setText(String.valueOf(meinTableModel.getGesamtpreis()));
+    }
+
+    private void neu() {
+        this.meinTableModel = new MeinTableModel();
+        jTable.setModel(meinTableModel);
+        anzeigeAktualisieren();
+    }
+
+    private void eintragen() {
+        if (jComboBox.getSelectedIndex() == 0) {
+            return;
+        }
+
+        String eingabe = jtxtAnzahl.getText();
+        int anzahl = 0;
+        try {
+            anzahl = Integer.parseInt(eingabe);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Fehlerhafte eingabe Anzahl", "Fehler", JOptionPane.WARNING_MESSAGE);
+            jtxtAnzahl.setText("");
+            return;
+        }
+
+        Gegenstand gegenstand = (Gegenstand) jComboBox.getSelectedItem();
+        Gegenstand neuerGegenstand = new Gegenstand(gegenstand.getBezeichnung(), gegenstand.getEinzelpreis(), gegenstand.getAnzahl());
+
+        if (anzahl > 0) {
+            neuerGegenstand.setAnzahl(anzahl);
+            meinTableModel.hinzufuegen(neuerGegenstand);
+            jComboBox.setSelectedIndex(0);
+            jtxtAnzahl.setText("");
+            anzeigeAktualisieren();
+        }
+
     }
 
     private void beenden() {
@@ -74,15 +176,22 @@ public class Fenster extends JFrame {
     }
 
     private void initComponents() {
+        jFileChooser = new JFileChooser();
+
         jpNorth = new JPanel();
         jComboBox = new JComboBox<>();
-        jComboBox.addItem("Bitte Auswählen...");
+
+        befuelleComboBox();
+
         jtxtAnzahl = new JTextField(2);
+
         jbtnEintragen = new JButton("Eintragen");
+        jbtnLoeschen = new JButton("Löschen");
         jpNorth.add(jComboBox);
         jpNorth.add(new JLabel("Anzahl"));
         jpNorth.add(jtxtAnzahl);
         jpNorth.add(jbtnEintragen);
+        jpNorth.add(jbtnLoeschen);
 
         meinTableModel = new MeinTableModel();
         jTable = new JTable(meinTableModel);
@@ -100,7 +209,30 @@ public class Fenster extends JFrame {
 
     }
 
+    private void befuelleComboBox() {
+        jComboBox.addItem(new Gegenstand("Bitte auswählen...", 0, 0));
+        try {
+            dao.findeArtikel("%");
+            for (Gegenstand gegenstand : dao.getGegenstande()) {
+                jComboBox.addItem(gegenstand);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                dao.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     public static void main(String[] args) {
-        new Fenster();
+        try {
+            new Fenster();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
     }
 }
